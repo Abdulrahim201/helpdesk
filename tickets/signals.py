@@ -1,6 +1,8 @@
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+
 from .models import Ticket, TicketHistory
+from django.core.mail import send_mail
 
 @receiver(pre_save, sender=Ticket)
 def log_ticket_changes(sender, instance, **kwargs):
@@ -22,5 +24,14 @@ def log_ticket_changes(sender, instance, **kwargs):
                         old_value=old_value,
                         new_value=new_value
                     )
+
+                    if field == 'status':
+                        send_mail(
+                            subject=f"Ticket #{instance.pk} status updated",
+                            message=f"The status for ticket #{instance.pk} has changed from '{old_value}' to '{new_value}'",
+                            from_email=None,  # uses DEFAULT_FROM_EMAIL automatically
+                            recipient_list=[old_ticket.created_by.email],
+                            fail_silently=True
+                        )
         except Ticket.DoesNotExist:
             pass
